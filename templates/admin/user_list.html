@@ -32,6 +32,10 @@
                     </td>
                     <td>
                         <a href="/admin/user/edit/{{user.id}}" class="btn btn-sm btn-outline-primary">Edit</a>
+                        <form action="/admin/user/reset_password/{{user.id}}" method="POST" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-outline-warning"
+                                onclick="return confirm('Reset mật khẩu của người dùng này về 123?')">Reset PW</button>
+                        </form>
                         <a href="/admin/user/delete/{{user.id}}" class="btn btn-sm btn-outline-danger"
                             onclick="return confirm('Xóa người dùng này?')">Delete</a>
                     </td>

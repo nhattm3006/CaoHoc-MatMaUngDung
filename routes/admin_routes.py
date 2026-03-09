@@ -108,6 +108,21 @@ def add_user():
     return render_template("admin/user_add.html")
 
 
+@admin_bp.route("/admin/user/reset_password/<int:user_id>", methods=["POST"])
+@login_required
+@admin_required
+def reset_password(user_id):
+    user = User.query.get_or_404(user_id)
+    
+    # Reset to default password "123"
+    new_hashed = hash_password(user.username, "123")
+    user.password = new_hashed
+    
+    db.session.commit()
+    flash(f"Mật khẩu của {user.username} đã được reset về '123'.", "success")
+    return redirect("/admin/user/list")
+
+
 # FILE MANAGEMENT FOR ADMIN
 
 @admin_bp.route("/admin/file/list")
