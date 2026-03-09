@@ -632,27 +632,36 @@
     const chatForm = document.getElementById('msgForm');
     if (chatForm) {
         chatForm.addEventListener('submit', async (e) => {
-            if (!conversationData.isSecure || !currentAESKey) return; // Regular flow
+            if (conversationData.isSecure) {
+                if (!currentAESKey) {
+                    e.preventDefault();
+                    alert("Phòng chat bảo mật chưa được mở khóa hoặc đối phương chưa tham gia. Bạn không thể gửi tin nhắn chưa mã hóa.");
+                    return;
+                }
 
-            e.preventDefault();
-            const input = document.getElementById('msgContent');
-            const text = input.value;
-            if (!text) return;
+                e.preventDefault();
+                const input = document.getElementById('msgContent');
+                const text = input.value;
+                if (!text) return;
 
-            const { content, nonce } = await encryptMessage(text, currentAESKey);
+                const { content, nonce } = await encryptMessage(text, currentAESKey);
 
-            const formData = new FormData();
-            formData.append('content', content);
-            formData.append('nonce', nonce);
+                const formData = new FormData();
+                formData.append('content', content);
+                formData.append('nonce', nonce);
 
-            fetch(chatForm.action, {
-                method: 'POST',
-                body: formData,
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            }).then(() => {
-                input.value = '';
-                location.reload();
-            });
+                fetch(chatForm.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                }).then(() => {
+                    input.value = '';
+                    location.reload();
+                });
+            } else {
+                // Regular chat flow - allow default form submit
+                return true;
+            }
         });
     }
 

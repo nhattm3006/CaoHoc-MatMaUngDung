@@ -146,6 +146,13 @@ def send_message(conv_id):
     if not content:
         return redirect(url_for('chat.chat', conv_id=conv_id))
     
+    # SECURITY FIX: Prevent unencrypted messages in secure chats
+    if conv.is_secure and not nonce:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"error": "Tin nhắn trong phòng bảo mật bắt buộc phải được mã hóa."}), 400
+        flash("Lỗi bảo mật: Không thể gửi tin nhắn chưa mã hóa vào phòng E2EE.", "danger")
+        return redirect(url_for('chat.chat', conv_id=conv_id))
+
     new_msg = Message(
         conversation_id=conv_id,
         sender_id=user.id,
