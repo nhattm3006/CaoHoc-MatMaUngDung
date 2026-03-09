@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mt-4">
+    <h2>Tệp tin được chia sẻ với tôi</h2>
+
+    <div class="table-responsive mt-4">
+        <table class="table table-striped align-middle border">
+            <thead class="table-dark">
+                <tr>
+                    <th>Tên file</th>
+                    <th>Chủ sở hữu</th>
+                    <th>Trạng thái</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in files %}
+                <tr>
+                    <td>{{ f.filename }}</td>
+                    <td><span class="badge bg-dark">{{ f.owner.username }}</span></td>
+                    <td>
+                        {% if f.shared_with == "0" %}
+                        <span class="badge bg-success">Công khai</span>
+                        {% else %}
+                        <span class="badge bg-info text-dark">Chia sẻ riêng</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="/download/{{ f.id }}" class="btn btn-sm btn-success">Tải về</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3" class="text-center text-muted">Không có tệp tin nào được chia sẻ với bạn.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

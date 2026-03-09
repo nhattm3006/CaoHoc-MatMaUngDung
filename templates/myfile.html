@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mt-4">
+    <h2>File của tôi</h2>
+
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="card shadow p-4 mb-4">
+        <h4>Tải lên tệp mới</h4>
+        <form method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <input type="file" name="file" class="form-control" accept=".png,.jpg,.jpeg,.pdf" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Trạng thái ban đầu:</label>
+                <select name="status" class="form-select">
+                    <option value="0">Riêng tư</option>
+                    <option value="1">Chia sẻ (Toàn bộ)</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Tải lên</button>
+        </form>
+    </div>
+
+    <h4>Danh sách tệp tin</h4>
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Tên file</th>
+                    <th>Trạng thái</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in user_files %}
+                <tr>
+                    <td>{{ f.filename }}</td>
+                    <td>
+                        {% if f.status == 1 %}
+                        {% if f.shared_with == "0" %}
+                        <span class="badge bg-success">Chia sẻ (Tất cả)</span>
+                        {% else %}
+                        <span class="badge bg-info text-dark">Chia sẻ (Cụ thể)</span>
+                        {% endif %}
+                        {% else %}
+                        <span class="badge bg-secondary">Riêng tư</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="/download/{{ f.id }}" class="btn btn-sm btn-success">Tải về</a>
+                        <button class="btn btn-sm btn-warning" data-bs-toggle="modal"
+                            data-bs-target="#editModal{{ f.id }}">
+                            Chỉnh sửa
+                        </button>
+                        <form action="/myfile/delete/{{ f.id }}" method="POST" class="d-inline"
+                            onsubmit="return confirm('Bạn có chắc chắn muốn xóa tệp này?')">
+                            <button type="submit" class="btn btn-sm btn-danger">Xóa</button>
+                        </form>
+                    </td>
+                </tr>
+
+                <!-- Modal Chỉnh sửa -->
+                <div class="modal fade" id="editModal{{ f.id }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form action="/myfile/edit/{{ f.id }}" method="POST">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Chỉnh sửa file: {{ f.filename }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Trạng thái:</label>
+                                        <select name="status" class="form-select" id="statusSelect{{ f.id }}"
+                                            onchange="toggleSharingUI('{{ f.id }}')">
+                                            <option value="0" {% if f.status==0 %}selected{% endif %}>Riêng tư</option>
+                                            <option value="1" {% if f.status==1 %}selected{% endif %}>Chia sẻ</option>
+                                        </select>
+                                    </div>
+
+                                    <div id="sharingUI{{ f.id }}" class="{% if f.status == 0 %}d-none{% endif %}">
+                                        <hr>
+                                        <label class="form-label">Đối tượng chia sẻ:</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="sharing_type"
+                                                id="shareAll{{ f.id }}" value="all" {% if f.shared_with=="0" %}checked{%
+                                                endif %} onchange="toggleUserList('{{ f.id }}')">
+                                            <label class="form-check-label" for="shareAll{{ f.id }}">Tất cả</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="radio" name="sharing_type"
+                                                id="shareSpecific{{ f.id }}" value="specific" {% if f.shared_with !="0"
+                                                and f.shared_with !="-1" %}checked{% endif %}
+                                                onchange="toggleUserList('{{ f.id }}')">
+                                            <label class="form-check-label" for="shareSpecific{{ f.id }}">Cụ thể</label>
+                                        </div>
+
+                                        <div id="userListUI{{ f.id }}"
+                                            class="{% if f.shared_with == '0' or f.shared_with == '-1' %}d-none{% endif %}">
+                                            <input type="text" class="form-control form-control-sm mb-2"
+                                                placeholder="Tìm kiếm user..."
+                                                onkeyup="filterUsers('{{ f.id }}', this.value)">
+                                            <div class="border rounded p-2"
+                                                style="max-height: 200px; overflow-y: auto;">
+                                                {% for user in all_users %}
+                                                <div class="form-check user-item-{{ f.id }}"
+                                                    data-username="{{ user.username }}">
+                                                    <input class="form-check-input" type="checkbox" name="shared_users"
+                                                        value="{{ user.id }}" id="user{{ f.id }}_{{ user.id }}" {% if
+                                                        user.id in f.shared_ids %}checked{% endif %}>
+                                                    <label class="form-check-label" for="user{{ f.id }}_{{ user.id }}">
+                                                        {{ user.username }}
+                                                    </label>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary"
+                                        data-bs-dismiss="modal">Đóng</button>
+                                    <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <tr>
+                    <td colspan="3" class="text-center text-muted">Chưa có tệp nào.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    function toggleSharingUI(id) {
+        const select = document.getElementById('statusSelect' + id);
+        const ui = document.getElementById('sharingUI' + id);
+        if (select.value === '1') {
+            ui.classList.remove('d-none');
+        } else {
+            ui.classList.add('d-none');
+        }
+    }
+
+    function toggleUserList(id) {
+        const specific = document.getElementById('shareSpecific' + id);
+        const ui = document.getElementById('userListUI' + id);
+        if (specific.checked) {
+            ui.classList.remove('d-none');
+        } else {
+            ui.classList.add('d-none');
+        }
+    }
+
+    function filterUsers(id, query) {
+        query = query.toLowerCase();
+        const items = document.querySelectorAll('.user-item-' + id);
+        items.forEach(item => {
+            const username = item.getAttribute('data-username').toLowerCase();
+            if (username.includes(query)) {
+                item.classList.remove('d-none');
+            } else {
+                item.classList.add('d-none');
+            }
+        });
+    }
+</script>
+{% endblock %}
