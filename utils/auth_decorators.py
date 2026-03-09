@@ -10,6 +10,12 @@ def login_required(func):
         if "username" not in session:
             return redirect("/login")
 
+        from models.user_model import User
+        user = User.query.filter_by(username=session["username"]).first()
+        if not user:
+            session.clear()
+            return redirect("/login")
+
         return func(*args, **kwargs)
 
     return wrapper

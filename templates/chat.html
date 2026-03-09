@@ -60,23 +60,83 @@
                 {{ p.username }}
                 {% endfor %}
                 {% endif %}
+                {% if active_conversation.is_secure %}
+                <span class="badge bg-warning text-dark ms-2" id="encryptionStatus">
+                    <i class="bi bi-lock-fill"></i> E2EE
+                </span>
+                {% endif %}
             </h5>
-            {% if active_conversation.is_group %}
-            <button class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#memberListModal">
-                <i class="bi bi-info-circle"></i> Thành viên
-            </button>
-            {% endif %}
+            <div class="d-flex align-items-center">
+                {% if active_conversation.is_secure %}
+                <div id="unlockArea" class="me-3 d-none">
+                    <div class="input-group input-group-sm">
+                        <input type="password" id="activePasscode" class="form-control" placeholder="Passcode"
+                            maxlength="6" style="width: 80px;">
+                        <button class="btn btn-success" id="unlockBtn">Mở khóa</button>
+                    </div>
+                </div>
+                {% endif %}
+                {% if active_conversation.is_group %}
+                <button class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#memberListModal">
+                    <i class="bi bi-info-circle"></i> Thành viên
+                </button>
+                {% endif %}
+            </div>
         </div>
 
+        {% if active_conversation.is_secure and not active_conversation.public_key_a and active_conversation.user_a_id
+        == current_user.id %}
+        <!-- Setup Phase for User A -->
+        <div class="d-flex flex-grow-1 align-items-center justify-content-center" id="setupSecureArea">
+            <div class="text-center p-4 border rounded bg-light shadow-sm" style="max-width: 400px;">
+                <i class="bi bi-shield-plus" style="font-size: 3rem; color: #0d6efd;"></i>
+                <h4 class="mt-3">Thiết lập bảo mật</h4>
+                <p class="text-muted">Bạn là người tạo phòng chat này. Hãy nhập passcode 6 số để tạo chìa khóa mã hóa.
+                </p>
+                <div class="input-group mb-3">
+                    <input type="password" id="setupPasscode" class="form-control" placeholder="123456" maxlength="6">
+                    <button class="btn btn-primary" id="setupSecureBtn">Khởi tạo</button>
+                </div>
+                <small class="text-danger"><i class="bi bi-exclamation-triangle"></i> Quên passcode đồng nghĩa với việc
+                    mất toàn bộ tin nhắn.</small>
+            </div>
+        </div>
+        {% elif active_conversation.is_secure and not active_conversation.public_key_b and active_conversation.user_a_id
+        != current_user.id %}
+        <!-- Join Phase for User B -->
+        <div class="d-flex flex-grow-1 align-items-center justify-content-center" id="joinSecureArea">
+            <div class="text-center p-4 border rounded bg-light shadow-sm" style="max-width: 400px;">
+                <i class="bi bi-shield-lock" style="font-size: 3rem; color: #ffc107;"></i>
+                <h4 class="mt-3">Tham gia bảo mật</h4>
+                <p class="text-muted">Người kia đã mời bạn vào chat bảo mật. Nhập passcode 6 số của bạn để thiết lập
+                    chìa khóa.</p>
+                <div class="input-group mb-3">
+                    <input type="password" id="joinPasscode" class="form-control" placeholder="123456" maxlength="6">
+                    <button class="btn btn-warning" id="joinSecureBtn">Tham gia</button>
+                </div>
+            </div>
+        </div>
+        {% elif active_conversation.is_secure and not (active_conversation.public_key_a and
+        active_conversation.public_key_b) %}
+        <!-- Waiting Phase -->
+        <div class="d-flex flex-grow-1 align-items-center justify-content-center">
+            <div class="text-center text-muted">
+                <i class="bi bi-hourglass-split" style="font-size: 3rem;"></i>
+                <h4 class="mt-3">Đang chờ đối phương...</h4>
+                <p>Cả hai người dùng cần phải nhập passcode để khởi tạo chìa khóa chung.</p>
+            </div>
+        </div>
+        {% else %}
+        <!-- Normal Chat / Unlock Phase -->
         <div class="flex-grow-1 overflow-auto px-3 py-2" id="chat-messages">
             {% for msg in messages %}
             <div class="mb-3 d-flex {% if msg.sender_id == current_user.id %}justify-content-end{% endif %}">
-                <div class="p-2 rounded shadow-sm"
-                    style="max-width: 70%; {% if msg.sender_id == current_user.id %}background-color: #007bff; color: white;{% else %}background-color: #f8f9fa;{% endif %}">
+                <div class="p-2 rounded shadow-sm msg-bubble {% if msg.sender_id == current_user.id %}bg-primary text-white{% else %}bg-light{% endif %}"
+                    style="max-width: 70%;">
                     {% if active_conversation.is_group and msg.sender_id != current_user.id %}
                     <div class="fw-bold small mb-1">{{ msg.sender.username }}</div>
                     {% endif %}
-                    <div>{{ msg.content }}</div>
+                    <div class="msg-content" data-nonce="{{ msg.nonce or '' }}">{{ msg.content }}</div>
                     <div class="text-end small opacity-75" style="font-size: 0.75rem;">
                         {{ msg.timestamp.strftime('%H:%M') }}
                     </div>
@@ -87,22 +147,42 @@
 
         <div class="border-top pt-3">
             <form action="{{ url_for('chat.send_message', conv_id=active_conversation.id) }}" method="POST"
-                class="d-flex">
-                <input type="text" name="content" class="form-control me-2" placeholder="Nhập tin nhắn..."
-                    autocomplete="off" required>
+                class="d-flex" id="msgForm">
+                <input type="text" name="content" id="msgContent" class="form-control me-2"
+                    placeholder="Nhập tin nhắn..." autocomplete="off" required>
                 <button type="submit" class="btn btn-primary">Gửi</button>
             </form>
         </div>
+        {% endif %}
         {% else %}
         <div class="d-flex flex-grow-1 align-items-center justify-content-center text-muted">
             <div class="text-center">
                 <i class="bi bi-chat-dots" style="font-size: 3rem;"></i>
-                <p class="mt-2">Chọn một cuộc trò chuyện để bắt đầu.</p>
+                <p class="mt-2 text-decoration-none">Chọn một cuộc trò chuyện để bắt đầu.</p>
             </div>
         </div>
         {% endif %}
     </div>
 </div>
+
+{# Hidden data for JavaScript - Safe from auto-formatters #}
+<script id="conversation-config" type="application/json">
+{
+    "id": {{ (active_conversation.id if active_conversation else "") | tojson | safe }},
+    "isSecure": {{ (active_conversation.is_secure if active_conversation else false) | tojson | safe }},
+    "pubA": {{ (active_conversation.public_key_a if active_conversation else "") | tojson | safe }},
+    "pubB": {{ (active_conversation.public_key_b if active_conversation else "") | tojson | safe }},
+    "encPrivA": {{ (active_conversation.encrypted_private_key_a if active_conversation else "") | tojson | safe }},
+    "encPrivB": {{ (active_conversation.encrypted_private_key_b if active_conversation else "") | tojson | safe }},
+    "saltA": {{ (active_conversation.salt_a if active_conversation else "") | tojson | safe }},
+    "saltB": {{ (active_conversation.salt_b if active_conversation else "") | tojson | safe }},
+    "ivA": {{ (active_conversation.iv_a if active_conversation else "") | tojson | safe }},
+    "ivB": {{ (active_conversation.iv_b if active_conversation else "") | tojson | safe }},
+    "userAId": {{ (active_conversation.user_a_id if active_conversation else "") | tojson | safe }},
+    "currentUserId": {{ (current_user.id if current_user else "") | tojson | safe }}
+}
+</script>
+
 
 <!-- Modal: New Message -->
 <div class="modal fade" id="newChatModal" tabindex="-1">
@@ -134,10 +214,21 @@
                         <label class="form-label">Tên nhóm (tùy chọn):</label>
                         <input type="text" name="group_name" class="form-control" placeholder="Tên nhóm...">
                     </div>
+                    <div class="mb-3" id="secureChatContainer">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="isSecureToggle" name="is_secure_check">
+                            <label class="form-check-label" for="isSecureToggle">Secure Chat
+                                (E2EE)</label>
+                        </div>
+                        <small class="text-muted d-block mt-1">Bảo mật chỉ hỗ trợ chat 1-1. Bạn sẽ thiết
+                            lập khóa sau
+                            khi tạo phòng.</small>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-                    <button type="submit" class="btn btn-primary">Bắt đầu chat</button>
+                    <button type="button" class="btn btn-primary" id="startChatBtn">Bắt đầu
+                        chat</button>
                 </div>
             </form>
         </div>
@@ -171,39 +262,421 @@
 {% endif %}
 
 <script>
-    // User filtering logic
+    // --- Crypto Utilities ---
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+
+    // Safer Buffer to Base64 using a loop and explicit range check
+    function bufferToBase64(buf) {
+        if (!buf) return "";
+        try {
+            const bytes = new Uint8Array(buf);
+            let binary = "";
+            for (let i = 0; i < bytes.length; i++) {
+                binary += String.fromCharCode(bytes[i] & 0xFF);
+            }
+            return window.btoa(binary);
+        } catch (e) {
+            console.error("bufferToBase64 error:", e);
+            throw new Error("Lỗi mã hóa Base64: " + e.message);
+        }
+    }
+
+    // Safer Base64 to Buffer
+    function base64ToBuffer(b64) {
+        if (!b64 || typeof b64 !== "string") return new Uint8Array(0);
+        const cleanB64 = b64.replace(/\s/g, "");
+        if (cleanB64 === "") return new Uint8Array(0);
+        try {
+            const binary_string = window.atob(cleanB64);
+            const bytes = new Uint8Array(binary_string.length);
+            for (let i = 0; i < binary_string.length; i++) {
+                bytes[i] = binary_string.charCodeAt(i);
+            }
+            return bytes;
+        } catch (e) {
+            console.error("base64ToBuffer error:", e);
+            throw new Error("Lỗi giải mã Base64: " + e.message);
+        }
+    }
+
+    // Derive AES key from passcode using PBKDF2
+    async function deriveAESKeyFromPasscode(passcode, saltBuf) {
+        if (!saltBuf || saltBuf.byteLength === 0) throw new Error("Thiếu salt.");
+        const passcodeKey = await crypto.subtle.importKey(
+            "raw", encoder.encode(passcode), "PBKDF2", false, ["deriveKey"]
+        );
+        return await crypto.subtle.deriveKey(
+            { name: "PBKDF2", salt: saltBuf, iterations: 100000, hash: "SHA-256" },
+            passcodeKey,
+            { name: "AES-GCM", length: 256 },
+            true,
+            ["encrypt", "decrypt"]
+        );
+    }
+
+    async function exportPublicKey(keyPair) {
+        if (!keyPair || !keyPair.publicKey) throw new Error("Key pair is invalid");
+        try {
+            const pubKeyBuf = await crypto.subtle.exportKey("spki", keyPair.publicKey);
+            return bufferToBase64(pubKeyBuf);
+        } catch (e) {
+            console.error("exportKey (SPKI) failed:", e);
+            throw new Error("Không thể xuất chìa khóa công khai (SPKI): " + e.message);
+        }
+    }
+
+    async function importPublicKey(b64) {
+        const bytes = base64ToBuffer(b64);
+        if (bytes.byteLength === 0) throw new Error("Chìa khóa trống.");
+        try {
+            return await crypto.subtle.importKey(
+                "spki", bytes, { name: "ECDH", namedCurve: "P-256" }, true, []
+            );
+        } catch (e) {
+            console.error("importKey (SPKI) failed:", e);
+            throw new Error("Không thể nhập chìa khóa đối phương: " + e.message);
+        }
+    }
+
+    async function deriveSharedAESKey(privateKey, otherPublicKey) {
+        const sharedSecret = await crypto.subtle.deriveBits(
+            { name: "ECDH", public: otherPublicKey },
+            privateKey,
+            256
+        );
+        const aesSeed = await crypto.subtle.digest('SHA-256', sharedSecret);
+        return await crypto.subtle.importKey("raw", aesSeed, "AES-GCM", true, ["encrypt", "decrypt"]);
+    }
+
+    async function encryptMessage(text, aesKey) {
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, aesKey, encoder.encode(text));
+        return {
+            content: bufferToBase64(ciphertext),
+            nonce: bufferToBase64(iv)
+        };
+    }
+
+    async function decryptMessage(encryptedB64, nonceB64, aesKey) {
+        if (!encryptedB64 || !nonceB64) return "[Thiếu dữ liệu]";
+        try {
+            const ciphertext = base64ToBuffer(encryptedB64);
+            const iv = base64ToBuffer(nonceB64);
+            if (ciphertext.byteLength === 0 || iv.byteLength === 0) return "[Dữ liệu hỏng]";
+
+            const dec = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, aesKey, ciphertext);
+            return decoder.decode(dec);
+        } catch (e) {
+            console.error("Decryption failed:", e);
+            return "[Giải mã thất bại]";
+        }
+    }
+
+    // --- State & UI Logic ---
+    let currentAESKey = null;
+    let conversationData = {};
+    try {
+        const configScript = document.getElementById("conversation-config");
+        if (configScript) {
+            conversationData = JSON.parse(configScript.textContent);
+            console.log("Conversation Config Loaded:", conversationData);
+        }
+    } catch (e) {
+        console.error("Failed to parse conversation config:", e);
+    }
+
+    // Initialize decryption if secure and unlocked
+    async function unlockChat(passcode, isManual = false) {
+        if (!conversationData.isSecure) return;
+
+        try {
+            const isUserA = (conversationData.userAId == conversationData.currentUserId);
+            const encPrivB64 = isUserA ? conversationData.encPrivA : conversationData.encPrivB;
+            const saltB64 = isUserA ? conversationData.saltA : conversationData.saltB;
+            const ivB64 = isUserA ? conversationData.ivA : conversationData.ivB;
+            const otherPubKeyB64 = isUserA ? conversationData.pubB : conversationData.pubA;
+
+            if (!encPrivB64 || !saltB64 || !ivB64) {
+                if (isManual) alert("Bạn chưa thiết lập chìa khóa cho phòng chat này.");
+                return;
+            }
+
+            // 1. Derive AES key from passcode to decrypt private key
+            const aesKeyForPriv = await deriveAESKeyFromPasscode(passcode, base64ToBuffer(saltB64));
+
+            // 2. Decrypt private key
+            const privKeyBytes = await crypto.subtle.decrypt(
+                { name: "AES-GCM", iv: base64ToBuffer(ivB64) },
+                aesKeyForPriv,
+                base64ToBuffer(encPrivB64)
+            );
+            const myPrivateKey = await crypto.subtle.importKey(
+                "pkcs8", privKeyBytes, { name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]
+            );
+
+            if (!otherPubKeyB64) {
+                console.log("Waiting for other user's public key...");
+                return;
+            }
+
+            // 3. Derive shared AES key with other's public key
+            const otherPubKey = await importPublicKey(otherPubKeyB64);
+            currentAESKey = await deriveSharedAESKey(myPrivateKey, otherPubKey);
+
+            // 4. Decrypt historical messages
+            const messages = document.querySelectorAll('.msg-content');
+            for (let div of messages) {
+                const nonce = div.getAttribute('data-nonce');
+                if (nonce && div.getAttribute('data-decrypted') !== 'true') {
+                    const decrypted = await decryptMessage(div.innerText, nonce, currentAESKey);
+                    div.innerText = decrypted;
+                    div.setAttribute('data-decrypted', 'true');
+                }
+            }
+
+            // Scroll to bottom after decryption
+            const messagesDiv = document.getElementById('chat-messages');
+            if (messagesDiv) messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            const status = document.getElementById('encryptionStatus');
+            if (status) {
+                status.classList.remove('bg-warning');
+                status.classList.add('bg-success');
+                status.innerHTML = '<i class="bi bi-shield-check"></i> Đã giải mã';
+            }
+            const unlockArea = document.getElementById('unlockArea');
+            if (unlockArea) unlockArea.classList.add('d-none');
+
+            // Clear pending passcode if it was used for auto-unlock
+            sessionStorage.removeItem('e2ee_passcode_' + conversationData.id);
+        } catch (err) {
+            console.error("Unlock failed:", err);
+            if (isManual) alert("Lỗi giải mã. Kiểm tra lại passcode.");
+            sessionStorage.removeItem('e2ee_passcode_' + conversationData.id);
+        }
+    }
+
+    // Check for auto-unlock
+    window.addEventListener('load', () => {
+        if (conversationData.isSecure && conversationData.pubA && conversationData.pubB) {
+            const savedPasscode = sessionStorage.getItem('e2ee_passcode_' + conversationData.id);
+            if (savedPasscode) {
+                unlockChat(savedPasscode);
+            }
+        }
+    });
+
+    // --- Event Listeners ---
+    if (conversationData.isSecure) {
+        if (conversationData.pubA && conversationData.pubB) {
+            const unlockArea = document.getElementById('unlockArea');
+            if (unlockArea) unlockArea.classList.remove('d-none');
+            const unlockBtn = document.getElementById('unlockBtn');
+            if (unlockBtn) {
+                unlockBtn.addEventListener('click', () => {
+                    const passcode = document.getElementById('activePasscode').value;
+                    if (passcode.length === 6) {
+                        sessionStorage.setItem('e2ee_passcode_' + conversationData.id, passcode);
+                        unlockChat(passcode, true);
+                    }
+                });
+            }
+        }
+    }
+
+    // Setup Secure Chat (User A)
+    const setupBtn = document.getElementById('setupSecureBtn');
+    if (setupBtn) {
+        setupBtn.addEventListener('click', async () => {
+            const passcode = document.getElementById('setupPasscode').value;
+            if (passcode.length !== 6) return alert("Nhập passcode 6 số.");
+
+            try {
+                console.log("Starting Key Generation...");
+                // 1. Generate local key pair
+                const keyPair = await crypto.subtle.generateKey(
+                    { name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]
+                );
+                console.log("Key Pair Generated.");
+
+                // 2. Export public key
+                const pubKeyB64 = await exportPublicKey(keyPair);
+                console.log("Public Key Exported.");
+
+                // 3. Encrypt private key with passcode
+                const salt = crypto.getRandomValues(new Uint8Array(16));
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+                const aesKey = await deriveAESKeyFromPasscode(passcode, salt);
+
+                const privKeyExported = await crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
+                console.log("Private Key Exported.");
+                const encPrivKey = await crypto.subtle.encrypt(
+                    { name: "AES-GCM", iv: iv }, aesKey, privKeyExported
+                );
+                console.log("Private Key Encrypted.");
+
+                // 4. Save to server
+                const formData = new FormData();
+                formData.append('public_key', pubKeyB64);
+                formData.append('encrypted_private_key', bufferToBase64(encPrivKey));
+                formData.append('salt', bufferToBase64(salt));
+                formData.append('iv', bufferToBase64(iv));
+
+                sessionStorage.setItem('e2ee_passcode_' + conversationData.id, passcode);
+
+                const response = await fetch(`/chat/init_secure/${conversationData.id}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.includes("application/json")) {
+                        const data = await response.json();
+                        alert("Lỗi: " + (data.error || "Không rõ nguyên nhân"));
+                    } else {
+                        const text = await response.text();
+                        console.error("Server error (not JSON):", text);
+                        alert("Lỗi máy chủ (500). Có thể cơ sở dữ liệu chưa được cập nhật. Hãy thử chạy python create_db.py.");
+                    }
+                }
+            } catch (err) {
+                console.error("Setup failed:", err);
+                alert("Lỗi hệ thống khi khởi tạo khóa: " + err.message);
+            }
+        });
+    }
+
+    // Join Secure Chat (User B)
+    const joinBtn = document.getElementById('joinSecureBtn');
+    if (joinBtn) {
+        joinBtn.addEventListener('click', async () => {
+            const passcode = document.getElementById('joinPasscode').value;
+            if (passcode.length !== 6) return alert("Nhập passcode 6 số.");
+
+            try {
+                // 1. Generate local key pair
+                const keyPair = await crypto.subtle.generateKey(
+                    { name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]
+                );
+
+                // 2. Export public key
+                const pubKeyB64 = await exportPublicKey(keyPair);
+
+                // 3. Encrypt private key with passcode
+                const salt = crypto.getRandomValues(new Uint8Array(16));
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+                const aesKey = await deriveAESKeyFromPasscode(passcode, salt);
+
+                const privKeyExported = await crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
+                const encPrivKey = await crypto.subtle.encrypt(
+                    { name: "AES-GCM", iv: iv }, aesKey, privKeyExported
+                );
+
+                // 4. Save to server
+                const formData = new FormData();
+                formData.append('public_key', pubKeyB64);
+                formData.append('encrypted_private_key', bufferToBase64(encPrivKey));
+                formData.append('salt', bufferToBase64(salt));
+                formData.append('iv', bufferToBase64(iv));
+
+                sessionStorage.setItem('e2ee_passcode_' + conversationData.id, passcode);
+
+                const response = await fetch(`/chat/join/${conversationData.id}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.includes("application/json")) {
+                        const data = await response.json();
+                        alert("Lỗi: " + (data.error || "Không rõ nguyên nhân"));
+                    } else {
+                        const text = await response.text();
+                        console.error("Server error (not JSON):", text);
+                        alert("Lỗi máy chủ (500) khi tham gia. Hãy thử chạy python create_db.py.");
+                    }
+                }
+            } catch (err) {
+                console.error("Join failed:", err);
+                alert("Lỗi hệ thống khi tham gia: " + err.message);
+            }
+        });
+    }
+
+    // New Conversation Creation
+    document.getElementById('startChatBtn').addEventListener('click', () => {
+        const isSecure = document.getElementById('isSecureToggle').checked;
+        const participants = Array.from(document.querySelectorAll('.participant-checkbox:checked')).map(cb => cb.value);
+
+        if (isSecure && participants.length !== 1) {
+            return alert("Bảo mật (E2EE) hiện chỉ hỗ trợ chat 1-1.");
+        }
+
+        const form = document.getElementById('newChatModal').querySelector('form');
+        const isSecureInput = document.createElement('input');
+        isSecureInput.type = 'hidden';
+        isSecureInput.name = 'is_secure';
+        isSecureInput.value = isSecure ? 'true' : 'false';
+        form.appendChild(isSecureInput);
+        form.submit();
+    });
+
+    // Send Message
+    const chatForm = document.getElementById('msgForm');
+    if (chatForm) {
+        chatForm.addEventListener('submit', async (e) => {
+            if (!conversationData.isSecure || !currentAESKey) return; // Regular flow
+
+            e.preventDefault();
+            const input = document.getElementById('msgContent');
+            const text = input.value;
+            if (!text) return;
+
+            const { content, nonce } = await encryptMessage(text, currentAESKey);
+
+            const formData = new FormData();
+            formData.append('content', content);
+            formData.append('nonce', nonce);
+
+            fetch(chatForm.action, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).then(() => {
+                input.value = '';
+                location.reload();
+            });
+        });
+    }
+
+    // --- Existing UI Logic ---
     document.getElementById('userFilter').addEventListener('keyup', function () {
         const query = this.value.toLowerCase();
         const items = document.querySelectorAll('.user-item');
         items.forEach(item => {
             const username = item.getAttribute('data-username').toLowerCase();
-            if (username.includes(query)) {
-                item.classList.remove('d-none');
-            } else {
-                item.classList.add('d-none');
-            }
+            item.classList.toggle('d-none', !username.includes(query));
         });
     });
 
-    // Show group name field if more than 1 participant selected
     const checkboxes = document.querySelectorAll('.participant-checkbox');
-    const groupNameContainer = document.getElementById('groupNameContainer');
     checkboxes.forEach(cb => {
         cb.addEventListener('change', function () {
             const checkedCount = document.querySelectorAll('.participant-checkbox:checked').length;
-            if (checkedCount > 1) {
-                groupNameContainer.classList.remove('d-none');
-            } else {
-                groupNameContainer.classList.add('d-none');
-            }
+            document.getElementById('groupNameContainer').classList.toggle('d-none', checkedCount <= 1);
+            document.getElementById('secureChatContainer').classList.toggle('d-none', checkedCount !== 1);
         });
     });
 
-    // Auto-scroll to bottom of chat
     const messagesDiv = document.getElementById('chat-messages');
-    if (messagesDiv) {
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
+    if (messagesDiv) messagesDiv.scrollTop = messagesDiv.scrollHeight;
 </script>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
