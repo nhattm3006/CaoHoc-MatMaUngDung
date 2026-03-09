@@ -39,6 +39,9 @@
                     <li class="nav-item">
                         <a class="nav-link" href="/chat">Nhắn tin</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/verify">Kiểm tra chữ ký</a>
+                    </li>
                     {% endif %}
 
                     {% if session.get('role') == 'admin' %}
@@ -58,6 +61,9 @@
                             </span>
                             {% endif %}
                         </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/profile">Tài khoản</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="/logout">Logout</a>

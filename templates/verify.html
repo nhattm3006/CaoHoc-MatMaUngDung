@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h4 class="mb-0"><i class="bi bi-shield-check me-2 text-primary"></i>Kiểm tra chữ ký số (RSA + SHA256)
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                <form action="{{ url_for('verify.verify') }}" method="POST" enctype="multipart/form-data">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">1. Tải lên tệp tin</label>
+                        <input type="file" name="file" class="form-control" required>
+                        <small class="text-muted">Hỗ trợ: .png, .jpg, .jpeg, .pdf</small>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">2. Nhập chữ ký số (Base64)</label>
+                        <textarea name="signature" class="form-control font-monospace" rows="4"
+                            placeholder="Dán chữ ký Base64 tại đây..." required></textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">3. Chế độ kiểm tra</label>
+                        <div class="d-flex gap-4 mt-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="mode" id="mode1" value="1" checked
+                                    onclick="toggleUserSelect(true)">
+                                <label class="form-check-label" for="mode1">
+                                    Kiểm tra theo User cụ thể
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="mode" id="mode2" value="2"
+                                    onclick="toggleUserSelect(false)">
+                                <label class="form-check-label" for="mode2">
+                                    Tìm người đã ký file này
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="user-select-container" class="mb-4">
+                        <label class="form-label fw-bold">4. Chọn người dùng để kiểm tra</label>
+                        <select name="user_id" id="user_id" class="form-select select2">
+                            <option value="">-- Chọn User --</option>
+                            {% for user in users %}
+                            <option value="{{ user.id }}">{{ user.username }} ({{ user.name or 'Chưa đặt tên' }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-check-all me-1"></i> Bắt đầu kiểm tra
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if results %}
+        <div class="card shadow-sm border-0 animate__animated animate__fadeIn">
+            <div class="card-header bg-white border-bottom">
+                <h5 class="mb-0">Kết quả kiểm tra</h5>
+            </div>
+            <div class="card-body p-4 text-center">
+                {% if results.mode == '1' %}
+                {% if results.is_valid %}
+                <div class="display-1 text-success mb-3"><i class="bi bi-patch-check-fill"></i></div>
+                <h3 class="text-success">Chữ ký HỢP LỆ!</h3>
+                <p class="lead">File này đúng là được ký bởi <strong>{{ results.checked_name or results.checked_user
+                        }}</strong>.</p>
+                {% else %}
+                <div class="display-1 text-danger mb-3"><i class="bi bi-patch-exclamation-fill"></i></div>
+                <h3 class="text-danger">Chữ ký KHÔNG HỢP LỆ!</h3>
+                <p>File đã bị thay đổi hoặc không phải của user này ký.</p>
+                {% endif %}
+                {% elif results.mode == '2' %}
+                {% if results.found %}
+                <div class="display-1 text-success mb-3"><i class="bi bi-person-check-fill"></i></div>
+                <h3 class="text-success">Đã tìm thấy người ký!</h3>
+                <p class="lead">Người đã ký tệp tin này là: <strong>{{ results.name or results.user }}</strong>.</p>
+                {% else %}
+                <div class="display-1 text-muted mb-3"><i class="bi bi-person-x-fill"></i></div>
+                <h3 class="text-muted">Không tìm thấy chủ sở hữu</h3>
+                <p>Không có user nào trên hệ thống khớp với chữ ký này cho file này.</p>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    function toggleUserSelect(show) {
+        const container = document.getElementById('user-select-container');
+        const select = document.getElementById('user_id');
+        if (show) {
+            container.style.display = 'block';
+            select.required = true;
+        } else {
+            container.style.display = 'none';
+            select.required = false;
+        }
+    }
+    // Init state
+    toggleUserSelect(document.getElementById('mode1').checked);
+</script>
+{% endblock %}

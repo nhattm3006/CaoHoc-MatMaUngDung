@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom py-3">
+                <h4 class="mb-0"><i class="bi bi-person-circle me-2"></i>Thông tin cá nhân</h4>
+            </div>
+            <div class="card-body p-4">
+                <!-- Thông tin cơ bản -->
+                <section class="mb-5">
+                    <h5 class="text-muted mb-3 border-bottom pb-2">Thông tin cơ bản</h5>
+                    <form action="{{ url_for('profile.update_profile') }}" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label">Tên người dùng (Username)</label>
+                            <input type="text" class="form-control bg-light" value="{{ user.username }}" readonly
+                                disabled>
+                            <small class="text-muted">Tên đăng nhập không thể thay đổi.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Họ và tên</label>
+                            <input type="text" name="name" class="form-control" value="{{ user.name or '' }}"
+                                placeholder="Nhập họ và tên...">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="email" class="form-control" value="{{ user.email or '' }}"
+                                placeholder="example@domain.com">
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-1"></i> Lưu thay đổi
+                        </button>
+                    </form>
+                </section>
+
+                <!-- Đổi mật khẩu -->
+                <section>
+                    <h5 class="text-muted mb-3 border-bottom pb-2">Đổi mật khẩu</h5>
+                    <form action="{{ url_for('profile.change_password') }}" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label">Mật khẩu hiện tại</label>
+                            <input type="password" name="old_password" class="form-control" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Mật khẩu mới</label>
+                                <input type="password" name="new_password" class="form-control" required minlength="6">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Xác nhận mật khẩu mới</label>
+                                <input type="password" name="confirm_password" class="form-control" required
+                                    minlength="6">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-outline-danger">
+                            <i class="bi bi-shield-lock me-1"></i> Đổi mật khẩu
+                        </button>
+                    </form>
+                </section>
+
+
+                <!-- Chìa khóa ký số (RSA) -->
+                <section class="mt-5 pt-4 border-top">
+                    <h5 class="text-muted mb-3 pb-2"><i class="bi bi-key me-2"></i>Chìa khóa ký số (RSA + SHA256)</h5>
+                    <div class="alert alert-info py-2 small mb-3">
+                        <i class="bi bi-info-circle me-1"></i> Các chìa khóa này được dùng để ký số và xác thực tài
+                        liệu. Bạn không thể thay đổi chúng.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Public Key (Khóa công khai)</label>
+                        <textarea class="form-control font-monospace small bg-light" rows="4"
+                            readonly>{{ user.rsa_public_key or 'Đang khởi tạo...' }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Private Key (Khóa bí mật)</label>
+                        <textarea class="form-control font-monospace small bg-light" rows="6"
+                            readonly>{{ user.rsa_private_key or 'Đang khởi tạo...' }}</textarea>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

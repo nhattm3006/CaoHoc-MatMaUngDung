@@ -15,3 +15,7 @@ class User(db.Model):
     name = db.Column(db.String(100))
 
     email = db.Column(db.String(100))
+    
+    # RSA keys for digital signatures
+    rsa_public_key = db.Column(db.Text)
+    rsa_private_key = db.Column(db.Text)

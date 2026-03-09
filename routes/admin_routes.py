@@ -3,6 +3,7 @@ from models.user_model import db, User
 from models.file_model import File
 from utils.auth_decorators import login_required, admin_required
 from utils.hash_utils import hash_password
+from utils.crypto_utils import generate_rsa_keys
 import os
 import json
 
@@ -87,13 +88,16 @@ def add_user():
         email = request.form["email"]
 
         hashed = hash_password(username, password)
+        pub_key, priv_key = generate_rsa_keys()
 
         user = User(
             username=username,
             password=hashed,
             role="user",
             name=name,
-            email=email
+            email=email,
+            rsa_public_key=pub_key,
+            rsa_private_key=priv_key
         )
 
         db.session.add(user)

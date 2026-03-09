@@ -28,11 +28,14 @@
                     </td>
                     <td>
                         <a href="/download/{{ f.id }}" class="btn btn-sm btn-success">Tải về</a>
+                        {% if f.signature %}
+                        <a href="/download_sig/{{ f.id }}" class="btn btn-sm btn-outline-dark">Tải chữ ký</a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="3" class="text-center text-muted">Không có tệp tin nào được chia sẻ với bạn.</td>
+                    <td colspan="4" class="text-center text-muted">Không có tệp tin nào được chia sẻ với bạn.</td>
                 </tr>
                 {% endfor %}
             </tbody>

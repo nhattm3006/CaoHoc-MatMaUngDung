@@ -4,6 +4,7 @@ from models.file_model import File
 from models.notification_model import Notification
 from utils.auth_decorators import login_required
 from utils.upload_file import save_file
+from utils.crypto_utils import sign_data
 import os
 import json
 
@@ -20,38 +21,62 @@ def myfile():
             return redirect("/myfile")
         
         file = request.files['file']
-        status = int(request.form.get("status", 0))
+        sharing_type = request.form.get("sharing_type", "private") # private, all, specific
         
-        # Default shared_with logic based on initial status
-        shared_with = "0" if status == 1 else "-1"
+        status = 0
+        shared_with = "-1"
+        
+        if sharing_type == "all":
+            status = 1
+            shared_with = "0"
+        elif sharing_type == "specific":
+            status = 1
+            shared_users = request.form.getlist("shared_users")
+            shared_with = json.dumps([int(uid) for uid in shared_users])
         
         upload_folder = os.path.join(current_app.root_path, 'uploads')
+        # Digital Signature Logic
+        signature = None
+        if user.rsa_private_key:
+            # We need to read the file content to sign it
+            file.seek(0)
+            data = file.read()
+            file.seek(0) # Reset pointer for save_file
+            signature = sign_data(user.rsa_private_key, data)
+
         filename, error = save_file(file, upload_folder)
         
         if error:
             flash(error)
             return redirect("/myfile")
-        
+
         new_file = File(
             filename=filename,
             owner_id=user.id,
             status=status,
-            shared_with=shared_with
+            shared_with=shared_with,
+            signature=signature
         )
         db.session.add(new_file)
         db.session.commit()
         
         # Create Notifications
         if status == 1:
+            from flask import url_for
+            share_link = url_for('file.shared_files')
             msg = f"{user.username} đã chia sẻ công khai một file mới: {filename}" if shared_with == "0" else f"{user.username} đã chia sẻ một file với bạn: {filename}"
+            
             if shared_with == "0":
                 all_users = User.query.filter(User.id != user.id).all()
                 for u in all_users:
-                    db.session.add(Notification(user_id=u.id, message=msg))
+                    db.session.add(Notification(user_id=u.id, message=msg, link=share_link))
             else:
-                # This specific sharing case in upload might not be fully implemented in the UI yet, 
-                # but adding here for consistency.
-                pass
+                try:
+                    target_uids = json.loads(shared_with)
+                    for uid in target_uids:
+                        db.session.add(Notification(user_id=uid, message=msg, link=share_link))
+                except:
+                    pass
             db.session.commit()
         
         return redirect("/myfile")
@@ -125,16 +150,19 @@ def edit_file(file_id):
     
     # Create Notifications on Edit
     if status == 1:
+        from flask import url_for
+        share_link = url_for('file.shared_files')
         msg = f"{user.username} đã chia sẻ công khai file: {file.filename}" if file.shared_with == "0" else f"{user.username} đã chia sẻ file với bạn: {file.filename}"
+        
         if file.shared_with == "0":
             all_users = User.query.filter(User.id != user.id).all()
             for u in all_users:
-                db.session.add(Notification(user_id=u.id, message=msg))
+                db.session.add(Notification(user_id=u.id, message=msg, link=share_link))
         elif file.shared_with not in ["-1", "0"]:
             try:
                 shared_ids = json.loads(file.shared_with)
                 for uid in shared_ids:
-                    db.session.add(Notification(user_id=uid, message=msg))
+                    db.session.add(Notification(user_id=uid, message=msg, link=share_link))
             except:
                 pass
         db.session.commit()
@@ -197,3 +225,41 @@ def download_file(file_id):
     
     flash("You do not have permission to download this file.")
     return redirect("/")
+@file_bp.route("/download_sig/<int:file_id>")
+@login_required
+def download_sig(file_id):
+    user = User.query.filter_by(username=session["username"]).first()
+    file = File.query.get_or_404(file_id)
+    
+    # Permission check (reuse logic from download_file)
+    can_download = False
+    if user.role == 'admin':
+        can_download = True
+    elif file.owner_id == user.id:
+        can_download = True
+    elif file.status == 1:
+        if file.shared_with == "0":
+            can_download = True
+        else:
+            try:
+                shared_ids = json.loads(file.shared_with)
+                if user.id in shared_ids:
+                    can_download = True
+            except:
+                pass
+                
+    if not can_download:
+        flash("You do not have permission to download this signature.")
+        return redirect("/")
+        
+    if not file.signature:
+        flash("File này không có chữ ký số.")
+        return redirect(request.referrer or "/")
+
+    # Return signature as a .sig file
+    from flask import Response
+    return Response(
+        file.signature,
+        mimetype="text/plain",
+        headers={"Content-disposition": f"attachment; filename={file.filename}.sig"}
+    )

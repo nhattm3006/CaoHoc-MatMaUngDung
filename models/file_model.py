@@ -14,4 +14,6 @@ class File(db.Model):
     # shared_with: -1 (Private), 0 (All), "[id1, id2, ...]" (Specific users)
     shared_with = db.Column(db.String(255), default="-1")
 
+    signature = db.Column(db.Text) # New signature column
+
     owner = db.relationship('User', backref=db.backref('files', lazy=True))

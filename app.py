@@ -8,6 +8,8 @@ from routes.admin_routes import admin_bp
 from routes.file_routes import file_bp
 from routes.chat_routes import chat_bp
 from routes.notification_routes import notification_bp
+from routes.profile_routes import profile_bp
+from routes.verify_routes import verify_bp
 from models.notification_model import Notification
 from models.user_model import User
 from flask import session
@@ -28,6 +30,8 @@ app.register_blueprint(admin_bp)
 app.register_blueprint(file_bp)
 app.register_blueprint(chat_bp)
 app.register_blueprint(notification_bp)
+app.register_blueprint(profile_bp)
+app.register_blueprint(verify_bp)
 
 @app.context_processor
 def inject_notifications():
