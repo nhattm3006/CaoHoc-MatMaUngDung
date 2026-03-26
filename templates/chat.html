@@ -147,7 +147,8 @@
 
         <div class="border-top pt-3">
             <form action="{{ url_for('chat.send_message', conv_id=active_conversation.id) }}" method="POST"
-                class="d-flex" id="msgForm">
+                class="d-flex" id="chat-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <input type="text" name="content" id="msgContent" class="form-control me-2"
                     placeholder="Nhập tin nhắn..." autocomplete="off" required>
                 <button type="submit" class="btn btn-primary">Gửi</button>
@@ -189,6 +190,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <form action="{{ url_for('chat.new_conversation') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <div class="modal-header">
                     <h5 class="modal-title">Tin nhắn mới</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>

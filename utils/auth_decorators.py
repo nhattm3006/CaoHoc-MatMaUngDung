@@ -1,6 +1,6 @@
 from flask import request, redirect, g, after_this_request
 from functools import wraps
-from utils.jwt_utils import decode_token, generate_access_token
+from utils.jwt_utils import decode_token, generate_access_token, generate_refresh_token
 
 
 def login_required(func):
@@ -11,25 +11,31 @@ def login_required(func):
         
         payload = decode_token(access_token) if access_token else "MISSING"
 
-        # Case 1: Valid access token
-        if not isinstance(payload, str):
+        # Case 1: Valid access token (Must be type 'access')
+        if not isinstance(payload, str) and payload.get("type") == "access":
             g.user = payload
             return func(*args, **kwargs)
 
         # Case 2: Expired access token, try refresh
-        if payload == "EXPIRED" and refresh_token:
+        if (payload == "EXPIRED" or (not isinstance(payload, str) and payload.get("type") != "access")) and refresh_token:
             refresh_payload = decode_token(refresh_token)
             if not isinstance(refresh_payload, str) and refresh_payload.get("type") == "refresh":
-                # Create new access token
-                new_access_token = generate_access_token(
+                # Create NEW access token AND NEW refresh token (Rotation)
+                new_access = generate_access_token(
+                    refresh_payload["user_id"], 
+                    refresh_payload["username"], 
+                    refresh_payload["role"]
+                )
+                new_refresh = generate_refresh_token(
                     refresh_payload["user_id"], 
                     refresh_payload["username"], 
                     refresh_payload["role"]
                 )
                 
                 @after_this_request
-                def set_access_cookie(response):
-                    response.set_cookie("access_token", new_access_token, httponly=True, samesite='Lax')
+                def set_tokens_cookie(response):
+                    response.set_cookie("access_token", new_access, httponly=True, samesite='Lax', max_age=3600)
+                    response.set_cookie("refresh_token", new_refresh, httponly=True, samesite='Lax', max_age=3600)
                     return response
                 
                 g.user = refresh_payload
@@ -49,19 +55,26 @@ def admin_required(func):
         
         payload = decode_token(access_token) if access_token else "MISSING"
         
-        # If expired/missing, check refresh (similar to login_required)
-        if isinstance(payload, str):
-            if payload == "EXPIRED" and refresh_token:
+        # If invalid/expired, try refresh
+        if isinstance(payload, str) or payload.get("type") != "access":
+            if (payload == "EXPIRED" or (not isinstance(payload, str) and payload.get("type") != "access")) and refresh_token:
                 refresh_payload = decode_token(refresh_token)
                 if not isinstance(refresh_payload, str) and refresh_payload.get("type") == "refresh":
-                    new_access_token = generate_access_token(
+                    # Rotation for Admin too
+                    new_access = generate_access_token(
+                        refresh_payload["user_id"], 
+                        refresh_payload["username"], 
+                        refresh_payload["role"]
+                    )
+                    new_refresh = generate_refresh_token(
                         refresh_payload["user_id"], 
                         refresh_payload["username"], 
                         refresh_payload["role"]
                     )
                     @after_this_request
-                    def set_access_cookie(response):
-                        response.set_cookie("access_token", new_access_token, httponly=True, samesite='Lax')
+                    def set_tokens_cookie(response):
+                        response.set_cookie("access_token", new_access, httponly=True, samesite='Lax', max_age=3600)
+                        response.set_cookie("refresh_token", new_refresh, httponly=True, samesite='Lax', max_age=3600)
                         return response
                     payload = refresh_payload
                 else:
@@ -75,4 +88,4 @@ def admin_required(func):
         g.user = payload
         return func(*args, **kwargs)
 
-    return wrapper
+    return wrapper

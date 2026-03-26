@@ -4,3 +4,4 @@ bcrypt
 cryptography
 PyJWT
 python-dotenv
+flask-wtf

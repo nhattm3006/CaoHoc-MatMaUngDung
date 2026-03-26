@@ -9,6 +9,7 @@
             <h3>Thông báo của bạn</h3>
             {% if notifications %}
             <form action="{{ url_for('notification.read_all') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <button type="submit" class="btn btn-outline-secondary btn-sm">Đánh dấu tất cả là đã đọc</button>
             </form>
             {% endif %}

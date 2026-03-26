@@ -18,7 +18,7 @@ def generate_refresh_token(user_id, username, role):
         "username": username,
         "role": role,
         "type": "refresh",
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(days=7)
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=1)
     }
     return jwt.encode(payload, current_app.secret_key, algorithm="HS256")
 

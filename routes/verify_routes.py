@@ -30,11 +30,10 @@ def verify():
                 results = {
                     "mode": "1",
                     "is_valid": is_valid,
-                    "checked_user": user.username,
-                    "checked_name": user.name
+                    "checked_user": user.username # Only return username, which is less sensitive than UID in some contexts, but still...
                 }
         
-        elif mode == '2':
+        elif mode == '2' and g.user.get('role') == 'admin': # Restrict search all to admins
             users = User.query.filter(User.rsa_public_key.isnot(None)).all()
             found_user = None
             for user in users:

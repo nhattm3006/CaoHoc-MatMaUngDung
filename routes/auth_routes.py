@@ -34,7 +34,7 @@ def login():
                 httponly=True,
                 secure=False,
                 samesite="Lax",
-                max_age=7 * 24 * 3600  # 7 days
+                max_age=3600  # 1 hour
             )
             return response
 

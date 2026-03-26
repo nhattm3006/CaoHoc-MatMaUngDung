@@ -19,11 +19,13 @@ from routes.profile_routes import profile_bp
 from routes.verify_routes import verify_bp
 from models.notification_model import Notification
 from utils.jwt_utils import decode_token
+from flask_wtf.csrf import CSRFProtect
 
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///database.db"
 
 db.init_app(app)
+csrf = CSRFProtect(app)
 
 
 app.register_blueprint(auth_bp)
