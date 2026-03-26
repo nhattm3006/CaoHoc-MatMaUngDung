@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, session, current_app, redirect, flash, jsonify, send_from_directory
+from flask import Blueprint, render_template, request, current_app, redirect, flash, jsonify, send_from_directory, g
 from models.user_model import db, User
 from models.file_model import File
 from models.notification_model import Notification
@@ -13,7 +13,7 @@ file_bp = Blueprint("file", __name__)
 @file_bp.route("/myfile", methods=["GET", "POST"])
 @login_required
 def myfile():
-    user = User.query.filter_by(username=session["username"]).first()
+    user = User.query.filter_by(username=g.user["username"]).first()
     
     if request.method == "POST":
         if 'file' not in request.files:
@@ -101,7 +101,7 @@ def myfile():
 @file_bp.route("/myfile/delete/<int:file_id>", methods=["POST"])
 @login_required
 def delete_file(file_id):
-    user = User.query.filter_by(username=session["username"]).first()
+    user = User.query.filter_by(username=g.user["username"]).first()
     file = File.query.get_or_404(file_id)
     
     if file.owner_id != user.id:
@@ -123,7 +123,7 @@ def delete_file(file_id):
 @file_bp.route("/myfile/edit/<int:file_id>", methods=["POST"])
 @login_required
 def edit_file(file_id):
-    user = User.query.filter_by(username=session["username"]).first()
+    user = User.query.filter_by(username=g.user["username"]).first()
     file = File.query.get_or_404(file_id)
     
     if file.owner_id != user.id:
@@ -173,7 +173,7 @@ def edit_file(file_id):
 @file_bp.route("/share")
 @login_required
 def shared_files():
-    user = User.query.filter_by(username=session["username"]).first()
+    user = User.query.filter_by(username=g.user["username"]).first()
     
     # Get all files shared with everyone or specifically with this user
     all_shared = File.query.filter(File.status == 1, File.owner_id != user.id).all()
@@ -195,7 +195,7 @@ def shared_files():
 @file_bp.route("/download/<int:file_id>")
 @login_required
 def download_file(file_id):
-    user = User.query.filter_by(username=session["username"]).first()
+    user = User.query.filter_by(username=g.user["username"]).first()
     file = File.query.get_or_404(file_id)
     
     # Permission check
@@ -228,7 +228,7 @@ def download_file(file_id):
 @file_bp.route("/download_sig/<int:file_id>")
 @login_required
 def download_sig(file_id):
-    user = User.query.filter_by(username=session["username"]).first()
+    user = User.query.filter_by(username=g.user["username"]).first()
     file = File.query.get_or_404(file_id)
     
     # Permission check (reuse logic from download_file)

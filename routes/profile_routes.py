@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, g
 from models.user_model import db, User
 from utils.auth_decorators import login_required
 from utils.hash_utils import hash_password, check_password
@@ -8,13 +8,13 @@ profile_bp = Blueprint('profile', __name__)
 @profile_bp.route('/profile')
 @login_required
 def profile():
-    user = User.query.filter_by(username=session["username"]).first()
+    user = User.query.filter_by(username=g.user["username"]).first()
     return render_template('profile.html', user=user)
 
 @profile_bp.route('/profile/update', methods=['POST'])
 @login_required
 def update_profile():
-    user = User.query.filter_by(username=session["username"]).first()
+    user = User.query.filter_by(username=g.user["username"]).first()
     user.name = request.form.get('name')
     user.email = request.form.get('email')
     
@@ -25,7 +25,7 @@ def update_profile():
 @profile_bp.route('/profile/change-password', methods=['POST'])
 @login_required
 def change_password():
-    user = User.query.filter_by(username=session["username"]).first()
+    user = User.query.filter_by(username=g.user["username"]).first()
     old_password = request.form.get('old_password')
     new_password = request.form.get('new_password')
     confirm_password = request.form.get('confirm_password')

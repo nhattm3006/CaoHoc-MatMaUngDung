@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, session, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, g
 from models.user_model import db, User
 from models.chat_model import Conversation, Message
 from utils.auth_decorators import login_required
@@ -11,7 +11,7 @@ chat_bp = Blueprint('chat', __name__)
 @chat_bp.route('/chat/<int:conv_id>')
 @login_required
 def chat(conv_id=None):
-    user = User.query.filter_by(username=session["username"]).first()
+    user = User.query.filter_by(username=g.user["username"]).first()
     
     # Get all conversations user is part of
     conversations = user.conversations
@@ -42,7 +42,7 @@ def chat(conv_id=None):
 @chat_bp.route('/chat/new', methods=['POST'])
 @login_required
 def new_conversation():
-    user = User.query.filter_by(username=session["username"]).first()
+    user = User.query.filter_by(username=g.user["username"]).first()
     participant_ids = request.form.getlist('participants')
     group_name = request.form.get('group_name')
     is_secure = request.form.get('is_secure') == 'true'
@@ -87,7 +87,7 @@ def new_conversation():
 @chat_bp.route('/chat/init_secure/<int:conv_id>', methods=['POST'])
 @login_required
 def init_secure_chat(conv_id):
-    user = User.query.filter_by(username=session["username"]).first()
+    user = User.query.filter_by(username=g.user["username"]).first()
     conv = Conversation.query.get_or_404(conv_id)
     if not conv.is_secure or conv.user_a_id != user.id:
         return jsonify({"error": "Unauthorized"}), 403
@@ -110,7 +110,7 @@ def init_secure_chat(conv_id):
 @chat_bp.route('/chat/join/<int:conv_id>', methods=['POST'])
 @login_required
 def join_secure_chat(conv_id):
-    user = User.query.filter_by(username=session["username"]).first()
+    user = User.query.filter_by(username=g.user["username"]).first()
     conv = Conversation.query.get_or_404(conv_id)
     if not conv.is_secure or user not in conv.participants or conv.user_a_id == user.id:
         return jsonify({"error": "Unauthorized"}), 403
@@ -134,7 +134,7 @@ def join_secure_chat(conv_id):
 @chat_bp.route('/chat/send/<int:conv_id>', methods=['POST'])
 @login_required
 def send_message(conv_id):
-    user = User.query.filter_by(username=session["username"]).first()
+    user = User.query.filter_by(username=g.user["username"]).first()
     conv = Conversation.query.get_or_404(conv_id)
     
     if user not in conv.participants:

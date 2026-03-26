@@ -1,6 +1,13 @@
-from flask import Flask
+import os
+from flask import Flask, request
+from dotenv import load_dotenv
 
-from models.user_model import db
+load_dotenv()
+
+app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY")
+
+from models.user_model import db, User
 
 from routes.auth_routes import auth_bp
 from routes.home_routes import home_bp
@@ -11,13 +18,8 @@ from routes.notification_routes import notification_bp
 from routes.profile_routes import profile_bp
 from routes.verify_routes import verify_bp
 from models.notification_model import Notification
-from models.user_model import User
-from flask import session
+from utils.jwt_utils import decode_token
 
-
-app = Flask(__name__)
-
-app.secret_key = "secret_key"
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///database.db"
 
@@ -35,11 +37,15 @@ app.register_blueprint(verify_bp)
 
 @app.context_processor
 def inject_notifications():
-    if "username" in session:
-        user = User.query.filter_by(username=session["username"]).first()
-        if user:
-            count = Notification.query.filter_by(user_id=user.id, is_read=False).count()
-            return {"unread_notifications_count": count}
+    token = request.cookies.get("access_token")
+    if token:
+        payload = decode_token(token)
+        if not isinstance(payload, str):
+            username = payload.get("username")
+            user = User.query.filter_by(username=username).first()
+            if user:
+                count = Notification.query.filter_by(user_id=user.id, is_read=False).count()
+                return {"unread_notifications_count": count}
     return {"unread_notifications_count": 0}
 
 
