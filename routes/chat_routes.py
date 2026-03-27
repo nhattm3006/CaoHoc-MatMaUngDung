@@ -114,6 +114,11 @@ def join_secure_chat(conv_id):
     conv = Conversation.query.get_or_404(conv_id)
     if not conv.is_secure or user not in conv.participants or conv.user_a_id == user.id:
         return jsonify({"error": "Unauthorized"}), 403
+    
+    # Ensure only the intended recipient (User B) can join
+    if conv.user_b_id and conv.user_b_id != user.id:
+        return jsonify({"error": "Bạn không phải là người được mời tham gia chat bảo mật này."}), 403
+
     conv.user_b_id = user.id
     conv.public_key_b = request.form.get('public_key')
     conv.encrypted_private_key_b = request.form.get('encrypted_private_key')

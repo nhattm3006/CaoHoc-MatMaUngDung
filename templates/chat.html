@@ -529,7 +529,10 @@
 
                 const response = await fetch(`/chat/init_secure/${conversationData.id}`, {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+                    }
                 });
 
                 if (response.ok) {
@@ -589,7 +592,10 @@
 
                 const response = await fetch(`/chat/join/${conversationData.id}`, {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+                    }
                 });
 
                 if (response.ok) {
@@ -631,7 +637,7 @@
     });
 
     // Send Message
-    const chatForm = document.getElementById('msgForm');
+    const chatForm = document.getElementById('chat-form');
     if (chatForm) {
         chatForm.addEventListener('submit', async (e) => {
             if (conversationData.isSecure) {
@@ -655,7 +661,10 @@
                 fetch(chatForm.action, {
                     method: 'POST',
                     body: formData,
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    headers: { 
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+                    }
                 }).then(() => {
                     input.value = '';
                     location.reload();
