@@ -38,17 +38,19 @@ app.register_blueprint(profile_bp)
 app.register_blueprint(verify_bp)
 
 @app.context_processor
-def inject_notifications():
+def inject_global_data():
     token = request.cookies.get("access_token")
+    role = None
+    count = 0
     if token:
         payload = decode_token(token)
         if not isinstance(payload, str):
             username = payload.get("username")
+            role = payload.get("role")
             user = User.query.filter_by(username=username).first()
             if user:
                 count = Notification.query.filter_by(user_id=user.id, is_read=False).count()
-                return {"unread_notifications_count": count}
-    return {"unread_notifications_count": 0}
+    return {"unread_notifications_count": count, "user_role": role}
 
 
 if __name__ == "__main__":

@@ -44,7 +44,7 @@
                     </li>
                     {% endif %}
 
-                    {% if session.get('role') == 'admin' %}
+                    {% if user_role == 'admin' %}
                     <li class="nav-item">
                         <a class="nav-link {% if is_admin_context %}active{% endif %}" href="/admin">Admin panel</a>
                     </li>
