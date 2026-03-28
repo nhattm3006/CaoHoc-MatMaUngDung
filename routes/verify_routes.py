@@ -33,7 +33,7 @@ def verify():
                     "checked_user": user.username # Only return username, which is less sensitive than UID in some contexts, but still...
                 }
         
-        elif mode == '2' and g.user.get('role') == 'admin': # Restrict search all to admins
+        elif mode == '2': # Search all users
             users = User.query.filter(User.rsa_public_key.isnot(None)).all()
             found_user = None
             for user in users:
