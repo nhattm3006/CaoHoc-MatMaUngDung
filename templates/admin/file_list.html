@@ -7,16 +7,7 @@
         <h2>Admin File Management</h2>
     </div>
 
-    {% with messages = get_flashed_messages() %}
-    {% if messages %}
-    {% for message in messages %}
-    <div class="alert alert-info alert-dismissible fade show" role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-    {% endfor %}
-    {% endif %}
-    {% endwith %}
+
 
     <div class="table-responsive">
         <table class="table table-striped align-middle border">
